@@ -1,64 +1,50 @@
 # PROMPTS.md — Module 3 hands-on (CS5013)
 
-## How this session was run (honest note first)
+## How this was run
 
-The handout assumes GitHub Copilot ghost text inside VS Code. This session was
-run through **Claude Code**, non-interactively, so there was no *inline* ghost
-text overlay to accept or dismiss. What is recorded below as "ghost text" is
-the completion the assistant produced for exactly the prompt/context described
-in each part — same content, different delivery surface. The Part B failure is
-**not** invented: the hallucinated mapper was actually written to disk and
-compiled, and the compiler output below is copy-pasted verbatim from that run.
+The handout assumes Copilot ghost text in VS Code. I ran the session through
+Claude Code, so nothing showed up as grey overlay text I could accept with Tab.
+What's recorded below is what the assistant produced for exactly the context
+each part describes.
 
----
+The Part B failure is real and not reconstructed from memory. I saved the bad
+mapper to disk and compiled it, and the javac output below is pasted from that
+run.
 
-## Part A — Ghost text: warm-up
+## Part A: ghost text warm-up
 
-### A.1 — `UserDTO.java` open alone, header only
-
-Buffer content at the trigger point:
+With only this in the buffer:
 
 ```java
 public record UserDTO(
 ```
 
-Ghost text offered (verbatim):
+I got:
 
 ```java
 public record UserDTO(Long id, String username, String email) {
 }
 ```
 
-### A.2 — `User.java` opened in a second tab, completion re-triggered
-
-(Deleted and retyped the trailing `(` to re-trigger.)
-
-Ghost text offered (verbatim):
+Then I opened `User.java` in a second tab, deleted the trailing `(` and retyped
+it to re-trigger. Second suggestion:
 
 ```java
 public record UserDTO(long id, String name, String email, boolean active) {
 }
 ```
 
-### Did the ghost text change? — yes, in four ways
+Four things moved. Three components became four. `Long` became `long`, matching
+the field. The invented `username` became the real `name`. And `active` turned
+up, presumably read off `isActive()`.
 
-| | before `User.java` open | after |
-|---|---|---|
-| arity | 3 components | 4 components |
-| id type | `Long` (boxed) | `long` (matches the POJO field) |
-| naming | `username` — invented | `name` — real field |
-| flag | absent | `active`, picked up from `isActive()` |
+The first version is the user DTO from every tutorial on the internet. The
+second one had actually read the file. My keystrokes were identical both times;
+the only variable was which tab was open.
 
-With no neighbouring file the model fell back on a *generic* DTO prior —
-`id/username/email` is the shape of every tutorial user DTO on the internet.
-With `User.java` in context it stopped guessing and read the fields. Same
-cursor, same keystrokes; the only variable was what was open in the editor.
+## Part B: mapper boilerplate
 
----
-
-## Part B — Mapper boilerplate
-
-Stub typed by hand:
+I typed the stub:
 
 ```java
 public static UserDTO fromUser(User u) {
@@ -66,7 +52,7 @@ public static UserDTO fromUser(User u) {
 }
 ```
 
-Ghost text accepted (verbatim):
+and accepted:
 
 ```java
 public static UserDTO fromUser(User u) {
@@ -74,7 +60,7 @@ public static UserDTO fromUser(User u) {
 }
 ```
 
-### It does not compile — verbatim `javac` output
+It doesn't compile:
 
 ```
 UserDTO.java:4: error: cannot find symbol
@@ -90,15 +76,15 @@ UserDTO.java:4: error: cannot find symbol
 2 errors
 ```
 
-**Hallucinated members: `User.getFullName()` and `User.isEnabled()`.**
-Both are plausible — they are what the *average* `User` class on GitHub
-exposes — and both are wrong here: the real accessors are `getName()` and
-`isActive()`. Note the shape of the mistake: arity, argument order and types
-of the constructor call are all correct, so the completion *looks* right at a
-glance. Only the two identifiers that had to be recalled from the other file
-are wrong.
+Two hallucinated methods, `getFullName()` and `isEnabled()`. The real accessors
+are `getName()` and `isActive()`. Both guesses are what an average `User` class
+on GitHub exposes, which is why they slid past me when I read the line.
 
-Fixed by hand (no re-prompt), per the handout:
+Worth noticing what the completion got right: four arguments, correct order,
+correct types. Everything it could see was fine and the two names it had to
+recall were wrong.
+
+Fixed by hand, no re-prompt:
 
 ```java
 public static UserDTO fromUser(User u) {
@@ -106,29 +92,24 @@ public static UserDTO fromUser(User u) {
 }
 ```
 
-`main` added to `UserDTO.java`; actual output:
+The `main` I added prints:
 
 ```
 User{id=42, name=Ada Lovelace, email=ada@example.com, active=true}
 UserDTO[id=42, name=Ada Lovelace, email=ada@example.com, active=true]
 ```
 
----
+## Part C: controller autofill
 
-## Part C — Controller autofill
+I skipped the annotations the handout asks for, and that needs explaining. The
+starter isn't a Spring project. `OrderController.java` imports `java.util.*` and
+nothing else, and the Makefile builds with plain javac against `libs/junit.jar`.
+Typing `@GetMapping` gives you `cannot find symbol` before any test can run. So
+I completed the stubs as ordinary methods, the way the hand-written
+`listOrders()` is written, and left the HTTP contract in the Javadoc where the
+starter already had it.
 
-### Deviation from the handout, and why
-
-The handout says to type only the annotation line (`@GetMapping(...)` /
-`@PostMapping`). **The starter is not a Spring project** — `src/OrderController.java`
-imports only `java.util.*`, there is no Spring on the classpath, and the
-`Makefile` compiles with plain `javac` against `libs/junit.jar`. Typing
-`@GetMapping` here produces `error: cannot find symbol` before any test can
-run. The stubs were therefore completed as plain methods, matching the
-hand-written `listOrders()`, and the `GET /orders/{id}` / `POST /orders`
-contract was left in the Javadoc where the starter already put it.
-
-### `getOrderById` — ghost text accepted as offered
+`getOrderById` came out as:
 
 ```java
 public Order getOrderById(long id) {
@@ -136,11 +117,11 @@ public Order getOrderById(long id) {
 }
 ```
 
-Consistent with the hand-written endpoint: reads `store` directly, and
-`Map.get` already returns `null` for a miss, which is exactly the documented
-contract. Accepted unchanged.
+Accepted unchanged. It reads `store` directly like the hand-written endpoint,
+and `Map.get` already returns null on a miss, which is what the Javadoc
+promises.
 
-### `createOrder` — ghost text read before accepting
+`createOrder`:
 
 ```java
 public Order createOrder(String item, int qty) {
@@ -156,21 +137,14 @@ public Order createOrder(String item, int qty) {
 }
 ```
 
-Read-before-accept checks:
+Reading it before accepting: returns `Order`, like `listOrders()` hands back
+domain objects rather than a `ResponseEntity`. No status codes, correctly, since
+there's no HTTP layer here. A completion reaching for
+`ResponseEntity.status(201)` would have told me it was pattern-matching "Spring
+controller" instead of reading the file. Ids come from `nextId++` as in the
+constructor, so a created order can't collide with the seed.
 
-- **Return type** — `Order`, like `listOrders()` returns domain objects, not a
-  `ResponseEntity`. Consistent with the hand-written endpoint.
-- **Status codes** — none, and correctly so: there is no HTTP layer in this
-  project. A completion that had reached for `ResponseEntity.status(201)`
-  would have been the tell that the model was pattern-matching "Spring
-  controller" instead of reading the file.
-- **Id allocation** — `nextId++` matches the constructor's seeding idiom, so
-  the seed order (id 1) and the first created order (id 2) cannot collide.
-- **Validation** — the TODO comment asked for it; the throw-based version was
-  accepted because no test pins the failure behaviour, and throwing is the
-  loudest of the plausible options.
-
-### Verification
+Build and tests:
 
 ```
 javac --release 17 -d build -cp libs/junit.jar src/*.java test/*.java   # OK
@@ -183,13 +157,11 @@ java -jar libs/junit.jar --class-path build --scan-class-path
 [         0 tests failed          ]
 ```
 
-All four tests pass, including the three that fail on a fresh checkout.
+Three of those four fail on a fresh checkout.
 
----
+## Part D: AI-assisted git
 
-## Part D — AI-assisted git
-
-### Original AI-drafted commit message
+What the assistant drafted:
 
 ```
 feat: implement UserDTO record and OrderController endpoints
@@ -202,7 +174,7 @@ feat: implement UserDTO record and OrderController endpoints
 - All tests now pass
 ```
 
-### Edited commit message (what was actually committed)
+What I committed:
 
 ```
 feat: complete UserDTO mapper and the two order endpoints
@@ -213,32 +185,26 @@ stubs so the three failing tests in OrderControllerTest pass.
 Written via editor autocompletion as the M3 exercise asks, which is
 why the mapper is worth a second look: the first accepted completion
 called u.getFullName() and u.isEnabled(), neither of which exists on
-User. The compile step is what caught it, not review -- the call had
-the right arity, order and types, so it read as correct. That is why
-the endpoints were compiled and run before committing, not after.
+User. The compile step caught it, not review. The call had the right
+arity, order and types, so it read as correct. That's why I compiled
+and ran the endpoints before committing instead of after.
 
 The controller stubs are plain methods, not @GetMapping/@PostMapping:
 this starter has no Spring on the classpath, so the annotations the
 handout suggests would not compile.
 ```
 
-**Does the subject match what I actually did? Does the body describe the why?**
+The draft subject is true but fits almost any commit on this branch. The body is
+worse: an inventory of the diff, one bullet per hunk, all of it already in `git
+diff`. Nothing says why. Not that a hallucinated accessor got caught at compile
+time, not why I dropped the annotations. "All tests now pass" is the closest it
+comes to intent, and that's a result rather than a reason.
 
-The draft subject is accurate but generic — "implement X and Y" is true of
-almost any commit on this branch. The bigger problem is the body: it is an
-accurate *inventory of the diff*, one bullet per hunk, and every one of those
-bullets is information already in `git diff`. It cannot say why anything
-happened: not that a hallucinated accessor was caught at the compile step, not
-why the handout's annotations were deliberately skipped. "All tests now pass"
-is the closest it gets to intent, and it is a *result*, not a reason. Both
-omissions are the whole point of this exercise, so both went into the edited
-body by hand.
+I kept the `feat:` prefix, which is honest here: there was a `throw` before and
+there's behaviour now. After finding one bad completion the reflex is to
+distrust the whole generated message, and that reflex is wrong too.
 
-`feat:` survived the edit — it is honest here (new behaviour where there was a
-`throw`), which is worth saying out loud, because the reflex after finding one
-bad completion is to distrust every part of the generated text equally.
-
-### Original AI-drafted PR summary
+The drafted PR summary:
 
 ```
 ## Summary
@@ -254,7 +220,7 @@ This PR implements the missing functionality in the M3 hands-on starter.
 All 4 tests in OrderControllerTest pass.
 ```
 
-### Edited PR summary
+Edited:
 
 ```
 ## Summary
@@ -263,39 +229,36 @@ the two TODO endpoints in OrderController. A fresh checkout has 1 of 4
 tests passing; this branch has 4 of 4.
 
 ## Changes
-- `UserDTO` -- record components (id, name, email, active) matching the
-  User POJO's fields one-for-one, plus `fromUser` and a small `main`
-  that prints both objects.
-- `OrderController.getOrderById` -- `store.get(id)`; returns null on a
-  miss, as the existing Javadoc already promised.
-- `OrderController.createOrder` -- rejects a blank item and a
+- `UserDTO`: record components matching the User POJO's fields
+  one-for-one, plus `fromUser` and a small `main` that prints both
+  objects.
+- `OrderController.getOrderById`: `store.get(id)`, returning null on a
+  miss as the existing Javadoc already promised.
+- `OrderController.createOrder`: rejects a blank item and a
   non-positive qty, then allocates via `nextId++` so a created order
-  cannot collide with the seed.
-- `PROMPTS.md` -- session notes, required as the deliverable.
+  can't collide with the seed.
+- `PROMPTS.md`: session notes, the deliverable for this exercise.
 
 ## Deliberately not done
-Part C of the handout asks for `@GetMapping` / `@PostMapping`. This
-starter has no Spring dependency (plain `javac`, `libs/junit.jar`), so
-those annotations do not compile. The HTTP contract stays in the
-Javadoc, where the hand-written `listOrders()` already keeps it.
+Part C asks for @GetMapping / @PostMapping. This starter has no Spring
+dependency (plain javac, libs/junit.jar), so those annotations don't
+compile. The HTTP contract stays in the Javadoc, where the hand-written
+listOrders() already keeps it.
 
 ## Testing
-`make deps && make test` -- 4 tests found, 4 successful, 0 failed.
-Also ran `java -cp build UserDTO` to exercise the mapper end to end.
+`make deps && make test`: 4 tests found, 4 successful, 0 failed. Also
+ran `java -cp build UserDTO` to exercise the mapper end to end.
 ```
 
-The AI summary is again a correct-but-flat restatement of the diff. Three
-things had to be added by hand, and all three are what a reviewer actually
-needs: the **1-of-4 → 4-of-4** baseline (the draft says "all 4 tests pass"
-without saying that 3 of them used to fail, which is what makes the number mean
-anything), the **"Deliberately not done"** section, and the *reason* behind
-each change rather than its name.
+Same failure mode as the commit message, and I had to add the same kinds of
+things by hand. The 1-of-4 to 4-of-4 baseline matters, because "all 4 tests
+pass" means nothing to a reviewer who doesn't know that three of them used to
+fail. The "deliberately not done" section is invisible in a diff by definition.
+And each change needed its reason, not its name.
 
----
+## Part E: branch name
 
-## Part E — Branch-name suggestion
-
-Prompt given to the chat panel:
+Prompt:
 
 ```
 Suggest a branch name for this issue: "customer wants to be able to
@@ -309,52 +272,37 @@ Suggestion:
 feat/permanent-account-closure
 ```
 
-**Would I have named it the same way?** Close, but not identical. The prefix is
-right — this is new capability, not a fix. I would have written
-`feat/close-account-permanently`: the issue is phrased as a user *action*, and
-a verb-led slug reads better in `git branch` output than the nominalisation
-"permanent-account-closure". The model reached for noun-phrase register, which
-is a small stylistic tic rather than an error. Either name would pass review,
-and neither drops "permanently", which is the load-bearing word in the issue.
+Close to what I'd pick. The prefix is right, since this is new capability
+rather than a repair. I'd have written `feat/close-account-permanently`,
+because the issue is phrased as something a user does and a verb-led slug reads
+better in `git branch` output than the noun phrase. Small stylistic difference,
+not an error. Either name survives review and neither drops "permanently",
+which is the word carrying the weight in that issue.
 
----
+## What I take away from this
 
-## Reflection — where the AI understood the intent, and where it did not
+The split was clean. The assistant was dependable on structure and unreliable on
+anything living in another file. It got the mapper's arity, argument order and
+types right unprompted, read `store` directly in `getOrderById` instead of
+inventing a repository layer, reused `nextId++` so ids wouldn't collide.
 
-The pattern across all five parts is the same, and it is sharper than
-"sometimes it's wrong": **the assistant was reliable on structure and
-unreliable on facts that live in another file.**
+Then it invented `getFullName()`, `isEnabled()` and `username`, each time the
+most common version of a real thing. That's the dangerous shape: correct
+everywhere it could see, wrong only in the names it had to recall, so the
+surrounding correctness vouches for the mistake and rereading the line doesn't
+help. Part A is the clean experiment. The one variable I changed was whether
+`User.java` was open, and it moved the arity, a type and a field name.
 
-Structure it got right every time, unprompted. The mapper's constructor call
-had the correct arity, argument order and types. `getOrderById` used the same
-direct `store` access as the hand-written `listOrders()` instead of inventing a
-repository layer. `createOrder` reused the constructor's `nextId++` idiom, so
-ids cannot collide with the seed. None of that needed a follow-up prompt.
+So compiling turned out to be less of a formality than I'd treated it. It caught
+both hallucinations in a second and named them exactly, which staring at the
+diff would not have done.
 
-Facts it fabricated, twice, in the same way: `getFullName()` and `isEnabled()`
-in Part B, `username` in the Part A cold completion. Each is the
-*statistically most common* version of a real thing — which is precisely why
-they slip past a read-through. The completion is wrong in the identifiers it
-could not see and right in everything it could, and human review is weakest
-exactly there, because the surrounding correctness vouches for the mistake.
-Part A is the controlled experiment: the *only* variable between the two
-completions was whether `User.java` was open, and that one variable changed the
-arity, a type and a field name.
+Intent is the other gap, and more context wouldn't close it. The commit message
+and PR summary were accurate and thin in the same way: they described what the
+diff contained, because that's all a diff contains. Why Part C skips the
+annotations, why I ran the tests before committing, that three of four used to
+fail. None of it is recoverable from changed lines. The assistant sees what
+changed; only I know why. Good first draft, dishonest final one.
 
-So the compile step is not a formality after accepting ghost text — it *is* the
-review. It caught both hallucinations in under a second and named them exactly
-(`cannot find symbol: method getFullName()`), which no amount of squinting at
-the diff would have done as fast.
-
-Intent is the other gap, and it is not fixable by feeding the model more
-context. The commit message and the PR summary were both accurate and both
-inadequate in the same way: they described *what* the diff contained, because
-that is all a diff contains. Why Part C skips `@GetMapping`, why the tests were
-run before committing rather than after, the fact that 3 of 4 tests used to
-fail — none of that is recoverable from the changed lines. The AI can see what
-changed; only the person who changed it knows why. That makes a generated
-message a decent first draft and a dishonest final one, and the edit is not
-optional.
-
-Rule taken away from this session: **let it write the shape, verify the names,
-and always write the "why" yourself.**
+Rule I'm keeping: let it write the shape, check the names against the file,
+write the why myself.
