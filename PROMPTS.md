@@ -204,7 +204,10 @@ I kept the `feat:` prefix, which is honest here: there was a `throw` before and
 there's behaviour now. After finding one bad completion the reflex is to
 distrust the whole generated message, and that reflex is wrong too.
 
-The drafted PR summary:
+The pull request is at https://github.com/rikire/m3-hands-on/pull/1, and its
+description is the edited version below.
+
+The drafted summary:
 
 ```
 ## Summary
