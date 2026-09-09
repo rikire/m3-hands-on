@@ -29,16 +29,22 @@ public class OrderController {
     }
 
     /** GET /orders/{id} -- return the matching order, or null if
-     *  none exists. TODO: complete with Copilot. */
+     *  none exists. */
     public Order getOrderById(long id) {
-        // TODO: look up id in `store` and return it (or null).
-        throw new UnsupportedOperationException("TODO: complete via AI");
+        return store.get(id);
     }
 
     /** POST /orders -- create a new order, assign it the next id,
-     *  store it, and return it. TODO: complete with Copilot. */
+     *  store it, and return it. */
     public Order createOrder(String item, int qty) {
-        // TODO: validate item/qty, allocate nextId, put in store, return.
-        throw new UnsupportedOperationException("TODO: complete via AI");
+        if (item == null || item.isBlank()) {
+            throw new IllegalArgumentException("item must not be blank");
+        }
+        if (qty <= 0) {
+            throw new IllegalArgumentException("qty must be positive");
+        }
+        Order order = new Order(nextId++, item, qty);
+        store.put(order.id(), order);
+        return order;
     }
 }
